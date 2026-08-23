@@ -42,24 +42,26 @@ def health():
     return {"status": "ok"}
 
 
-# --- Stage 1 will replace these two with SQL reads ---
-tasks = [
-    {"id": 1, "title": "Learn FastAPI", "done": False},
-    {"id": 2, "title": "Build CRUD API", "done": False},
-    {"id": 3, "title": "Test with Swagger", "done": False},
-]
-
 @app.get("/tasks")
 def get_tasks():
-    return tasks
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM tasks").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int):
-    for t in tasks:
-        if t["id"] == task_id:
-            return t
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    conn.close()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    return dict(row)
 
+
+# --- Stage 2 will replace this with a SQL insert ---
+tasks = []
 
 class TaskCreate(BaseModel):
     title: str
