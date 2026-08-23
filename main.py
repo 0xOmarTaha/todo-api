@@ -1,16 +1,48 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+import sqlite3
+
+DB_FILE = "tasks.db"
+
+def get_db():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    count = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+    if count == 0:
+        conn.executemany(
+            "INSERT INTO tasks (title, done) VALUES (?, ?)",
+            [("Learn FastAPI", 0), ("Build CRUD API", 0), ("Test with Swagger", 0)]
+        )
+    conn.commit()
+    conn.close()
+
+init_db()
 
 app = FastAPI()
+
 
 @app.get("/")
 def root():
     return {"name": "Task API", "version": "1.0", "endpoints": ["/tasks"]}
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
+# --- Stage 1 will replace these two with SQL reads ---
 tasks = [
     {"id": 1, "title": "Learn FastAPI", "done": False},
     {"id": 2, "title": "Build CRUD API", "done": False},
@@ -28,6 +60,7 @@ def get_task(task_id: int):
             return t
     raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
 
+
 class TaskCreate(BaseModel):
     title: str
 
@@ -39,6 +72,7 @@ def create_task(task: TaskCreate):
     new_task = {"id": new_id, "title": task.title, "done": False}
     tasks.append(new_task)
     return new_task
+
 
 class TaskUpdate(BaseModel):
     title: str | None = None
