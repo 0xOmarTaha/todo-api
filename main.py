@@ -60,9 +60,6 @@ def get_task(task_id: int):
     return dict(row)
 
 
-# --- Stage 2 will replace this with a SQL insert ---
-tasks = []
-
 class TaskCreate(BaseModel):
     title: str
 
@@ -70,10 +67,13 @@ class TaskCreate(BaseModel):
 def create_task(task: TaskCreate):
     if not task.title.strip():
         raise HTTPException(status_code=400, detail="Title is required")
-    new_id = max((t["id"] for t in tasks), default=0) + 1
-    new_task = {"id": new_id, "title": task.title, "done": False}
-    tasks.append(new_task)
-    return new_task
+    conn = get_db()
+    cursor = conn.execute("INSERT INTO tasks (title, done) VALUES (?, ?)", (task.title, 0))
+    conn.commit()
+    new_id = cursor.lastrowid
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (new_id,)).fetchone()
+    conn.close()
+    return dict(row)
 
 
 class TaskUpdate(BaseModel):
@@ -82,21 +82,18 @@ class TaskUpdate(BaseModel):
 
 @app.put("/tasks/{task_id}")
 def update_task(task_id: int, update: TaskUpdate):
-    for t in tasks:
-        if t["id"] == task_id:
-            if update.title is not None:
-                if not update.title.strip():
-                    raise HTTPException(status_code=400, detail="Title cannot be empty")
-                t["title"] = update.title
-            if update.done is not None:
-                t["done"] = update.done
-            return t
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    conn.close()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    raise HTTPException(status_code=501, detail="Not implemented until Stage 3")
 
 @app.delete("/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int):
-    for i, t in enumerate(tasks):
-        if t["id"] == task_id:
-            tasks.pop(i)
-            return
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    conn.close()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    raise HTTPException(status_code=501, detail="Not implemented until Stage 3")
