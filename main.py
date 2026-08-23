@@ -84,16 +84,36 @@ class TaskUpdate(BaseModel):
 def update_task(task_id: int, update: TaskUpdate):
     conn = get_db()
     row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
-    conn.close()
     if row is None:
+        conn.close()
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    raise HTTPException(status_code=501, detail="Not implemented until Stage 3")
+
+    new_title = row["title"]
+    new_done = row["done"]
+
+    if update.title is not None:
+        if not update.title.strip():
+            conn.close()
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        new_title = update.title
+    if update.done is not None:
+        new_done = int(update.done)
+
+    conn.execute("UPDATE tasks SET title = ?, done = ? WHERE id = ?", (new_title, new_done, task_id))
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    conn.close()
+    return dict(updated)
+
 
 @app.delete("/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int):
     conn = get_db()
     row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
-    conn.close()
     if row is None:
+        conn.close()
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    raise HTTPException(status_code=501, detail="Not implemented until Stage 3")
+    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return
