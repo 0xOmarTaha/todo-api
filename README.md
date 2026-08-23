@@ -44,3 +44,35 @@ content-type: application/json
 ## Swagger UI
 
 ![Swagger UI](swagger-screenshot.png)
+
+---
+
+## Week 3 — Connecting to SQLite
+
+### Why SQLite
+SQLite needs no separate server or installation — the whole database is a single file (`tasks.db`). It's the simplest way to get real persistence for a small project like this, and the same SQL skills transfer directly to Postgres or MySQL later.
+
+### Where the database lives
+`tasks.db` is created automatically the first time the app runs, in the project root. It's excluded from git (`.gitignore`) so every fresh clone starts empty and seeds its own three example tasks.
+
+### How to run
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install fastapi uvicorn
+uvicorn main:app --reload --port 8000
+```
+`tasks.db` and its `tasks` table are created automatically on first run.
+
+### Persistence proof
+Created a task, restarted the server, and ran `GET /tasks` again — the task was still there. Data now survives a restart, unlike Assignment 1's in-memory version.
+
+### Example SQL query
+```sql
+SELECT COUNT(*) FROM tasks;
+```
+Result: `3`
+
+### Database viewer
+
+![DB Browser](db-browser-screenshot.png)
